@@ -1,31 +1,123 @@
 import multer from "multer";
 
-const storage = multer.diskStorage({
+const imageStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'images');
+    // console.log("File object in multer image storage:", file);
+    cb(null, "images");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
+    const date = new Date().toISOString().slice(0, 10); //YYYY-MM-DD format
+    const filename =
+      "profile-picture-" + date + "-" + file.originalname;
+    cb(null, filename);
   },
 });
 
-function checkFileType(file, cb) {
-  const filetypes = /jpeg|jpg|png/;
-  const extname = filetypes.test(file.originalname.toLowerCase().split(".").pop());
-  const mimetype = filetypes.test(file.mimetype);
-
-  if (extname && mimetype) {
-    return cb(null, true);
-  } else {
-    cb("Error: Images Only!");
-  }
-}
-
-const upload = multer({ // will do custom uploads for other legal papers images later
-  storage: storage,
-  fileFilter: function (req, file, cb) {
-    checkFileType(file, cb);
+const driverStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (file.fieldname === 'image') {
+      cb(null, 'images');
+    } else if (file.fieldname === 'legals') {
+      cb(null, 'legals');
+    } else {
+      cb(new Error('Invalid field name'), false);
+    }
   },
-}).array('images', 10); //change later, number of uploads and field name
+  filename: (req, file, cb) => {
+    // console.log("File object in multer driver storage:", req.files);
+    const date = new Date().toISOString().slice(0,  10); //YYYY-MM-DD format
+    let filename;
+    if (file.fieldname === 'image') {
+      filename = "profile-picture-" + date + "-" + file.originalname;
+    } else if (file.fieldname === 'legals') {
+      let prefix;
+      switch (req.files.legals.length) {
+        case  1:
+          prefix = "driver-license-front";
+          break;
+        case  2:
+          prefix = "driver-license-back";
+          break;
+        case  3:
+          prefix = "driver-criminal-record";
+          break;
+        case  4:
+          prefix = "driver-residence-paper";
+          break;
+        default:
+          prefix = "unknown-document";
+          break;
+      }
+      filename = prefix + "-" + date + "-" + file.originalname;
+    }
+    cb(null, filename);
+  },
+});
 
-export default upload;
+const vehicleStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (file.fieldname === 'image') {
+      cb(null, 'images');
+    } else if (file.fieldname === 'legals') {
+      cb(null, 'legals');
+    } else {
+      cb(new Error('Invalid field name'), false);
+    }
+  },
+  filename: (req, file, cb) => {
+    const date = new Date().toISOString().slice(0,  10); //YYYY-MM-DD format
+    let filename;
+    if (file.fieldname === 'image') {
+      filename = "vehicle-picture-" + date + "-" + file.originalname;
+    } else if (file.fieldname === 'legals') {
+      let prefix;
+      switch (req.files.legals.length) {
+        case 1:
+          prefix = "vehicle-id-front";
+          break;
+        case 2:
+          prefix = "vehicle-id-back";
+          break;
+        default:
+          prefix = "unknown-document";
+          break;
+      }
+      filename = prefix + "-" + date + "-" + file.originalname;
+    }
+    cb(null, filename);
+  },
+});
+
+const imageFileFilter = (req, file, cb) => {
+  // console.log("File object in multer filter:", file);
+  if (file.mimetype.startsWith("image/")) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image files are allowed!"), false);
+  }
+};
+
+const imageUpload = multer({
+  storage: imageStorage,
+  fileFilter: imageFileFilter,
+});
+const driverUpload = multer({
+  storage: driverStorage,
+  fileFilter: imageFileFilter,
+});
+const vehicleUpload = multer({
+  storage: vehicleStorage,
+  fileFilter: imageFileFilter,
+});
+
+const DriverFields = [
+  { name: 'image', maxCount:  1 },
+  { name: 'legals', maxCount:  4 }
+];
+
+const VehicleFields = [
+  { name: 'image', maxCount:  1 },
+  { name: 'legals', maxCount:  2 }
+];
+
+export { VehicleFields, DriverFields, imageUpload, driverUpload, vehicleUpload };
